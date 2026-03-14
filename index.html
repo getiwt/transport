@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>運輸書類 読み取りシステム</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e0ddd4;
+    --border2: #ccc9bc;
+    --text: #1a1916;
+    --text2: #6b6860;
+    --text3: #9e9b92;
+    --accent: #1a4fd6;
+    --accent-light: #e8edfb;
+    --success: #0f7a4a;
+    --success-light: #e6f5ee;
+    --danger: #c0392b;
+    --danger-light: #fdecea;
+    --warn: #b45309;
+    --warn-light: #fef3e2;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
+  }
+
+  html { font-size: 15px; }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .logo-mark {
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .api-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .api-section label {
+    font-size: 12px;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+  .api-input {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 6px 10px;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    color: var(--text);
+    width: 260px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .api-input:focus { border-color: var(--accent); }
+  .api-input::placeholder { color: var(--text3); }
+
+  /* ── MAIN ── */
+  .main { max-width: 1200px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+
+  /* ── SECTION TITLES ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 0.75rem;
+  }
+
+  /* ── UPLOAD ── */
+  .upload-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+  .upload-zone {
+    padding: 2.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    border: 2px dashed var(--border2);
+    border-radius: 8px;
+    margin: 1rem;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .upload-zone:hover { background: var(--surface2); border-color: var(--accent); }
+  .upload-zone.drag { background: var(--accent-light); border-color: var(--accent); }
+  .upload-zone input { display: none; }
+  .upload-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1rem;
+    background: var(--surface2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+  }
+  .upload-icon svg { width: 22px; height: 22px; stroke: var(--text2); fill: none; stroke-width: 1.5; }
+  .upload-zone h3 { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .upload-zone p { font-size: 13px; color: var(--text2); }
+  .upload-zone small { font-size: 11px; color: var(--text3); margin-top: 6px; display: block; }
+
+  /* ── PREVIEW GRID ── */
+  .preview-section { padding: 0 1rem 1rem; display: none; }
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+  .preview-item {
+    position: relative;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    aspect-ratio: 3/4;
+    background: var(--surface2);
+  }
+  .preview-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .preview-remove {
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.55);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 20px;
+    text-align: center;
+    transition: background 0.1s;
+  }
+  .preview-remove:hover { background: rgba(192,57,43,0.9); }
+  .preview-status {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    font-size: 10px;
+    text-align: center;
+    padding: 3px 2px;
+    font-weight: 500;
+  }
+  .s-pending { background: rgba(30,30,30,0.55); color: #fff; }
+  .s-processing { background: rgba(26,79,214,0.85); color: #fff; }
+  .s-done { background: rgba(15,122,74,0.85); color: #fff; }
+  .s-error { background: rgba(192,57,43,0.85); color: #fff; }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 1rem 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    display: none;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--surface2); border-color: var(--border2); }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .btn-primary:hover { background: #1540b0; border-color: #1540b0; }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  .btn-success {
+    background: var(--success);
+    color: white;
+    border-color: var(--success);
+  }
+  .btn-success:hover { background: #0a5c37; }
+  .badge {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .badge-blue { background: var(--accent-light); color: var(--accent); }
+  .badge-green { background: var(--success-light); color: var(--success); }
+  .ml-auto { margin-left: auto; }
+
+  /* ── PROGRESS ── */
+  .progress-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .progress-bar {
+    height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.35s ease;
+  }
+  .log {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text2);
+    max-height: 100px;
+    overflow-y: auto;
+    line-height: 1.8;
+  }
+  .log .ok { color: var(--success); }
+  .log .err { color: var(--danger); }
+
+  /* ── RESULT TABLE ── */
+  .result-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: none;
+  }
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .result-header h2 {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .result-actions { display: flex; gap: 8px; }
+  .table-scroll { overflow-x: auto; max-height: 480px; overflow-y: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    min-width: 1600px;
+  }
+  thead { position: sticky; top: 0; z-index: 10; }
+  th {
+    background: var(--surface2);
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 500;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    font-size: 11px;
+  }
+  td {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    white-space: nowrap;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #fafaf8; }
+
+  /* ── MODAL ── */
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    display: none;
+  }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+    width: 420px;
+    max-width: 95vw;
+  }
+  .modal h3 { font-size: 15px; font-weight: 700; margin-bottom: 0.5rem; }
+  .modal p { font-size: 13px; color: var(--text2); margin-bottom: 1.25rem; line-height: 1.7; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* ── EMPTY ── */
+  .empty-row td { text-align: center; color: var(--text3); padding: 2rem; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--text);
+    color: var(--surface);
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.2s;
+    pointer-events: none;
+    z-index: 300;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 640px) {
+    .site-header { padding: 0 1rem; flex-wrap: wrap; height: auto; padding: 0.75rem 1rem; gap: 8px; }
+    .api-input { width: 100%; }
+    .main { padding: 1rem 1rem 3rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a class="logo" href="#">
+    <div class="logo-mark">運</div>
+    運輸書類 読み取りシステム
+  </a>
+  <div class="api-section">
+    <label for="apiKey">Anthropic API Key</label>
+    <input id="apiKey" class="api-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" />
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- Upload -->
+  <div class="upload-card">
+    <div class="upload-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*" multiple />
+      <div class="upload-icon">
+        <svg viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12M8 8l4-4 4 4"/></svg>
+      </div>
+      <h3>書類画像をアップロード</h3>
+      <p>クリックまたはドラッグ&ドロップ — 複数枚同時対応</p>
+      <small>配車依頼発注書 / コンテナ運送依頼票 / 運送依頼書 など</small>
+    </div>
+    <div class="preview-section" id="previewSection">
+      <div class="preview-grid" id="previewGrid"></div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar" id="toolbar">
+    <button class="btn btn-primary" id="extractBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      AIで一括読み取り開始
+    </button>
+    <button class="btn" id="addMoreBtn">追加</button>
+    <button class="btn" id="clearAllBtn">クリア</button>
+    <span class="badge badge-blue ml-auto" id="countBadge"></span>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-header">
+      <span id="progressLabel">読み取り中...</span>
+      <span id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-section" id="resultSection">
+    <div class="result-header">
+      <h2 id="resultTitle">読み取り結果</h2>
+      <div class="result-actions">
+        <button class="btn" id="editBtn">編集モード</button>
+        <button class="btn btn-success" id="csvBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSVダウンロード
+        </button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- API Key Modal -->
+<div class="modal-bg" id="apiModal">
+  <div class="modal">
+    <h3>APIキーが必要です</h3>
+    <p>このシステムはAnthropicのAIを使用して書類を読み取ります。<br>
+    右上の入力欄にAPIキーを入力してから再度お試しください。<br><br>
+    APIキーは <strong>console.anthropic.com</strong> で取得できます。</p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="document.getElementById('apiModal').style.display='none'; document.getElementById('apiKey').focus();">キーを入力する</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const COLUMNS = [
+  '管理番号','書類種別','依頼日','荷主名','REF番号','オーダー番号',
+  '依頼会社名','担当者','依頼会社TEL','船名','航海番号',
+  '積港','揚港','ETA','フリータイム','MBL番号',
+  'コンテナ番号','コンテナサイズ','個数','重量(KGS)','容積(M3)','品名',
+  '引取日','引取時刻','引取場所','引取場所住所','引取場所TEL',
+  '納入日','納入時刻','納入先名','納入先住所','納入先TEL',
+  '輸送方法','シャーシ軸数','料金(円)','消費税区分','備考'
+];
+
+let files = [];
+let results = [];
+let editMode = false;
+
+const $ = id => document.getElementById(id);
+const dropZone = $('dropZone');
+const fileInput = $('fileInput');
+const previewSection = $('previewSection');
+const previewGrid = $('previewGrid');
+const toolbar = $('toolbar');
+const extractBtn = $('extractBtn');
+const addMoreBtn = $('addMoreBtn');
+const clearAllBtn = $('clearAllBtn');
+const countBadge = $('countBadge');
+const progressWrap = $('progressWrap');
+const progressFill = $('progressFill');
+const progressLabel = $('progressLabel');
+const progressPct = $('progressPct');
+const logEl = $('log');
+const resultSection = $('resultSection');
+const resultTitle = $('resultTitle');
+const tableHead = $('tableHead');
+const tableBody = $('tableBody');
+const csvBtn = $('csvBtn');
+const editBtn = $('editBtn');
+const toast = $('toast');
+
+// ── Upload handling ──
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => addFiles(e.target.files));
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  addFiles(e.dataTransfer.files);
+});
+addMoreBtn.addEventListener('click', () => fileInput.click());
+clearAllBtn.addEventListener('click', () => {
+  files = []; results = [];
+  renderPreviews(); updateToolbar();
+  resultSection.style.display = 'none';
+  progressWrap.style.display = 'none';
+  logEl.innerHTML = '';
+  previewSection.style.display = 'none';
+});
+
+function addFiles(newFiles) {
+  Array.from(newFiles).forEach(f => {
+    if (!f.type.startsWith('image/')) return;
+    files.push({ file: f, status: 'pending', data: null, id: Date.now() + Math.random() });
+  });
+  renderPreviews();
+  updateToolbar();
+}
+
+function renderPreviews() {
+  previewGrid.innerHTML = '';
+  if (files.length === 0) { previewSection.style.display = 'none'; return; }
+  previewSection.style.display = 'block';
+  files.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'preview-item';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(item.file);
+    const rm = document.createElement('button');
+    rm.className = 'preview-remove';
+    rm.textContent = '×';
+    rm.title = '削除';
+    rm.onclick = () => {
+      if (item.status === 'processing') return;
+      files.splice(i, 1);
+      renderPreviews(); updateToolbar();
+    };
+    const st = document.createElement('div');
+    const labels = { pending:'待機中', processing:'読取中...', done:'完了', error:'エラー' };
+    st.className = 'preview-status s-' + item.status;
+    st.textContent = labels[item.status];
+    div.appendChild(img); div.appendChild(rm); div.appendChild(st);
+    previewGrid.appendChild(div);
+  });
+}
+
+function updateToolbar() {
+  if (files.length === 0) { toolbar.style.display = 'none'; return; }
+  toolbar.style.display = 'flex';
+  countBadge.textContent = files.length + '枚';
+}
+
+// ── Extract ──
+extractBtn.addEventListener('click', async () => {
+  const apiKey = $('apiKey').value.trim();
+  if (!apiKey) { $('apiModal').style.display = 'flex'; return; }
+
+  const pending = files.filter(f => f.status === 'pending');
+  if (pending.length === 0) { showToast('読み取り待ちの画像がありません'); return; }
+
+  extractBtn.disabled = true;
+  progressWrap.style.display = 'block';
+  logEl.innerHTML = '';
+  let done = 0;
+
+  const prompt = `この日本語の運輸書類画像を詳細に読み取り、以下のJSONキーに対応する値を抽出してください。
+読み取れない・該当しない項目は空文字("")にしてください。
+JSONのみを出力し、説明文やコードブロック記号は不要です。
+
+{
+  "管理番号": "",
+  "書類種別": "",
+  "依頼日": "",
+  "荷主名": "",
+  "REF番号": "",
+  "オーダー番号": "",
+  "依頼会社名": "",
+  "担当者": "",
+  "依頼会社TEL": "",
+  "船名": "",
+  "航海番号": "",
+  "積港": "",
+  "揚港": "",
+  "ETA": "",
+  "フリータイム": "",
+  "MBL番号": "",
+  "コンテナ番号": "",
+  "コンテナサイズ": "",
+  "個数": "",
+  "重量(KGS)": "",
+  "容積(M3)": "",
+  "品名": "",
+  "引取日": "",
+  "引取時刻": "",
+  "引取場所": "",
+  "引取場所住所": "",
+  "引取場所TEL": "",
+  "納入日": "",
+  "納入時刻": "",
+  "納入先名": "",
+  "納入先住所": "",
+  "納入先TEL": "",
+  "輸送方法": "",
+  "シャーシ軸数": "",
+  "料金(円)": "",
+  "消費税区分": "",
+  "備考": ""
+}`;
+
+  for (let i = 0; i < pending.length; i++) {
+    const item = pending[i];
+    item.status = 'processing';
+    renderPreviews();
+    progressLabel.textContent = `読み取り中 (${i+1}/${pending.length})：${item.file.name}`;
+    appendLog(`▶ ${item.file.name} ...`);
+
+    try {
+      const b64 = await toBase64(item.file);
+      const mediaType = item.file.type || 'image/jpeg';
+
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-5-20251101',
+          max_tokens: 1500,
+          messages: [{ role: 'user', content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+            { type: 'text', text: prompt }
+          ]}]
+        })
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.error?.message || resp.statusText);
+      }
+
+      const json = await resp.json();
+      const text = (json.content || []).map(c => c.text || '').join('').replace(/```json|```/g,'').trim();
+      const parsed = JSON.parse(text);
+      item.data = parsed;
+      item.status = 'done';
+      results.push({ ...parsed, _file: item.file.name });
+      appendLog(`✓ 完了`, 'ok');
+    } catch(e) {
+      item.status = 'error';
+      appendLog(`✗ エラー: ${e.message}`, 'err');
+    }
+
+    done++;
+    const pct = Math.round(done / pending.length * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent = pct + '%';
+    renderPreviews();
+  }
+
+  progressLabel.textContent = `完了 — ${done}件処理`;
+  extractBtn.disabled = false;
+  renderTable();
+  if (results.length > 0) {
+    resultSection.style.display = 'block';
+    resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showToast(results.length + '件のデータを取得しました');
+  }
+});
+
+// ── Table ──
+function renderTable() {
+  resultTitle.textContent = `読み取り結果 — ${results.length}件`;
+  tableHead.innerHTML = '<tr>' + COLUMNS.map(c => `<th>${c}</th>`).join('') + '</tr>';
+  if (results.length === 0) {
+    tableBody.innerHTML = '<tr class="empty-row"><td colspan="' + COLUMNS.length + '">データがありません</td></tr>';
+    return;
+  }
+  tableBody.innerHTML = results.map((row, ri) =>
+    '<tr>' + COLUMNS.map(c => {
+      const v = (row[c] || '');
+      if (editMode) {
+        return `<td><input style="width:100%;border:none;background:transparent;font-size:12px;font-family:inherit;padding:0;color:inherit;outline:none;" value="${escapeAttr(v)}" onchange="results[${ri}]['${c}']=this.value" /></td>`;
+      }
+      return `<td title="${escapeAttr(v)}">${escapeHtml(v)}</td>`;
+    }).join('') + '</tr>'
+  ).join('');
+}
+
+editBtn.addEventListener('click', () => {
+  editMode = !editMode;
+  editBtn.textContent = editMode ? '編集完了' : '編集モード';
+  editBtn.className = editMode ? 'btn btn-primary' : 'btn';
+  renderTable();
+});
+
+// ── CSV ──
+csvBtn.addEventListener('click', () => {
+  const BOM = '\uFEFF';
+  const header = COLUMNS.join(',');
+  const rows = results.map(row =>
+    COLUMNS.map(c => `"${(row[c]||'').toString().replace(/"/g,'""')}"`).join(',')
+  );
+  const csv = BOM + [header, ...rows].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '運輸管理データ_' + dateStr() + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSVをダウンロードしました');
+});
+
+// ── Helpers ──
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+function appendLog(msg, cls) {
+  const span = document.createElement('span');
+  if (cls) span.className = cls;
+  span.textContent = msg;
+  logEl.appendChild(span);
+  logEl.appendChild(document.createElement('br'));
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function escapeHtml(v) {
+  return v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escapeAttr(v) {
+  return v.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function dateStr() {
+  return new Date().toISOString().slice(0,10);
+}
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
