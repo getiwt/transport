@@ -404,7 +404,7 @@
   </a>
   <div class="api-section">
     <label for="apiKey">Anthropic API Key</label>
-    <input id="apiKey" class="api-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" />
+    <input id="apiKey" class="api-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" onchange="localStorage.setItem('anthropic_api_key', this.value)" />
   </div>
 </header>
 
@@ -500,6 +500,10 @@ let results = [];
 let editMode = false;
 
 const $ = id => document.getElementById(id);
+
+// APIキーをブラウザから復元
+const savedKey = localStorage.getItem('anthropic_api_key');
+if (savedKey) document.getElementById('apiKey').value = savedKey;
 const dropZone = $('dropZone');
 const fileInput = $('fileInput');
 const previewSection = $('previewSection');
@@ -587,6 +591,7 @@ function updateToolbar() {
 extractBtn.addEventListener('click', async () => {
   const apiKey = $('apiKey').value.trim();
   if (!apiKey) { $('apiModal').style.display = 'flex'; return; }
+  localStorage.setItem('anthropic_api_key', apiKey);
 
   const pending = files.filter(f => f.status === 'pending');
   if (pending.length === 0) { showToast('読み取り待ちの画像がありません'); return; }
